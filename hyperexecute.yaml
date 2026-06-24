@@ -28,6 +28,7 @@ pre:
   - mkdir -p reports
   - pip install --cache-dir .pip_cache -r requirements.txt -q
   - playwright install chromium firefox webkit
+  - python -c "import sys,json; sys.path.insert(0,'ci'); from pathlib import Path; from agent import generate_tests,write_test_selection,_validate_syntax; sc=json.loads(Path('scenarios/scenarios.json').read_text()); generate_tests(sc); _validate_syntax('tests/playwright/test_scenarios.py') or sys.exit(1); write_test_selection(sc); print(Path('reports/pytest_selection.txt').read_text())"
 
 runtime:
   language: python
