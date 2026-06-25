@@ -35,7 +35,7 @@ on:
       demo_mode:
         description: "DEMO MODE — use pre-generated Kane results, no live Kane calls"
         required: false
-        default: "true"
+        default: "false"
         type: boolean
 
 env:
@@ -50,7 +50,7 @@ jobs:
     permissions:
       actions: write
     env:
-      DEMO_MODE: ${{ inputs.demo_mode || 'false' }}
+      DEMO_MODE: ${{ github.event_name == 'push' && 'false' || inputs.demo_mode || 'false' }}
 
     steps:
       - uses: actions/checkout@v4
