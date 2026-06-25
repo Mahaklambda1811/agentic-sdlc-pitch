@@ -26,11 +26,10 @@ cacheDirectories:
 
 pre:
   - mkdir -p reports
-  - python3 -m venv .venv || python -m venv .venv
-  - .venv/bin/pip install --cache-dir .pip_cache -r requirements-he.txt
-  - .venv/bin/python -c "from playwright.sync_api import sync_playwright; print('[pre] playwright OK')"
-  - .venv/bin/python -m playwright install chromium firefox
-  - .venv/bin/python ci/generate_he_tests.py
+  - python3 -m pip install --cache-dir .pip_cache -r requirements-he.txt
+  - python3 -c "from playwright.sync_api import sync_playwright; print('[pre] playwright OK')"
+  - python3 -m playwright install chromium firefox
+  - python3 ci/generate_he_tests.py
 
 runtime:
   language: python
@@ -39,10 +38,10 @@ runtime:
 testDiscovery:
   type: raw
   mode: dynamic
-  command: PYTHONPATH=. .venv/bin/pytest tests/playwright/test_scenarios.py --collect-only -q --no-header 2>/dev/null | grep "::"
+  command: PYTHONPATH=. python3 -m pytest tests/playwright/test_scenarios.py --collect-only -q --no-header 2>/dev/null | grep "::"
 
 testRunnerCommand: >
-  PYTHONPATH=. .venv/bin/pytest "$test" -v --tb=short -s
+  PYTHONPATH=. python3 -m pytest "$test" -v --tb=short -s
   --html=reports/report.html
   --junitxml=reports/junit.xml
 
