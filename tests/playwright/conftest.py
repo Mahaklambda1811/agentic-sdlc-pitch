@@ -2,6 +2,10 @@
 Playwright conftest — connects to LambdaTest CDP for cloud execution,
 falls back to local Chromium when LT credentials are absent.
 BROWSERS env var (comma-separated) drives multi-browser parametrization.
+
+playwright.sync_api is imported lazily inside the fixture so that
+pytest --collect-only succeeds even before playwright is installed
+(e.g. on HyperExecute VMs during testDiscovery).
 """
 import json
 import os
@@ -9,7 +13,6 @@ import re
 from urllib.parse import quote
 
 import pytest
-from playwright.sync_api import sync_playwright
 
 LT_USERNAME   = os.environ.get("LT_USERNAME", "")
 LT_ACCESS_KEY = os.environ.get("LT_ACCESS_KEY", "")
@@ -46,6 +49,7 @@ def pytest_generate_tests(metafunc):
 
 @pytest.fixture()
 def page(request, browser_name):
+    from playwright.sync_api import sync_playwright  # lazy — allows collection without playwright
     test_name = re.sub(r"[^\w\s-]", "", request.node.name)[:80]
     with sync_playwright() as p:
         if LT_USERNAME and LT_ACCESS_KEY:

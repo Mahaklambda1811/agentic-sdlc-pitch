@@ -4,82 +4,71 @@
     "description": "User can add a product to the cart from the product detail page and see the cart count update immediately.",
     "kane_status": "passed",
     "kane_one_liner": "Add to cart updates counter instantly",
-    "kane_steps": [
-      "Navigate to product page",
-      "Click Add to Cart",
-      "Assert cart count increments"
-    ],
-    "kane_summary": "Cart count updates on product add"
+    "kane_steps": ["Navigate to product page", "Click Add to Cart", "Assert cart count increments"],
+    "kane_summary": "Cart count updates on product add",
+    "kane_code": ""
   },
   {
     "id": "AC-002",
     "description": "User can open the cart dropdown and see all added items with their names and prices.",
     "kane_status": "passed",
     "kane_one_liner": "Cart dropdown shows item names and prices",
-    "kane_steps": [
-      "Add product to cart",
-      "Click cart icon",
-      "Assert items listed with names and prices"
-    ],
-    "kane_summary": "Cart dropdown renders item details"
+    "kane_steps": ["Add product to cart", "Click cart icon", "Assert items listed with names and prices"],
+    "kane_summary": "Cart dropdown renders item details",
+    "kane_code": ""
   },
   {
     "id": "AC-003",
     "description": "User can remove an item from the cart and the cart total updates correctly.",
     "kane_status": "passed",
     "kane_one_liner": "Remove item recalculates cart total",
-    "kane_steps": [
-      "Add item to cart",
-      "Open cart",
-      "Click remove",
-      "Assert total updates"
-    ],
-    "kane_summary": "Item removal triggers total recalculation"
+    "kane_steps": ["Add item to cart", "Open cart", "Click remove", "Assert total updates"],
+    "kane_summary": "Item removal triggers total recalculation",
+    "kane_code": ""
   },
   {
     "id": "AC-004",
     "description": "User can search for a product by name and see relevant results on the search results page.",
     "kane_status": "passed",
     "kane_one_liner": "Search returns relevant product results",
-    "kane_steps": [
-      "Type product name in search bar",
-      "Press Enter",
-      "Assert result tiles visible"
-    ],
-    "kane_summary": "Search yields matching products"
+    "kane_steps": ["Type product name in search bar", "Press Enter", "Assert result tiles visible"],
+    "kane_summary": "Search yields matching products",
+    "kane_code": ""
   },
   {
     "id": "AC-005",
     "description": "User can browse the product catalog and see product tiles with names and prices.",
     "kane_status": "passed",
     "kane_one_liner": "Catalog displays product tiles with pricing",
-    "kane_steps": [
-      "Open category page",
-      "Assert product tiles with names and prices visible"
-    ],
-    "kane_summary": "Product catalog renders tiles"
+    "kane_steps": ["Open category page", "Assert product tiles with names and prices visible"],
+    "kane_summary": "Product catalog renders tiles",
+    "kane_code": ""
   },
   {
     "id": "AC-006",
     "description": "User can click a product tile to open the product detail page showing name, image, and price.",
     "kane_status": "passed",
     "kane_one_liner": "Product tile opens detail page with name, image, price",
-    "kane_steps": [
-      "Click product tile",
-      "Assert detail page shows name, image, price"
-    ],
-    "kane_summary": "Product detail page renders fully"
+    "kane_steps": ["Click product tile", "Assert detail page shows name, image, price"],
+    "kane_summary": "Product detail page renders fully",
+    "kane_code": ""
   },
   {
     "id": "AC-007",
     "description": "User can apply a category filter to narrow down the displayed products.",
     "kane_status": "passed",
     "kane_one_liner": "Category filter narrows product list",
-    "kane_steps": [
-      "Open category",
-      "Click filter",
-      "Assert product count changes"
-    ],
-    "kane_summary": "Filter narrows product listing"
+    "kane_steps": ["Open category", "Click filter", "Assert product count changes"],
+    "kane_summary": "Filter narrows product listing",
+    "kane_code": ""
+  },
+  {
+    "id": "AC-008",
+    "description": "User sees a success message after adding a product to the cart.",
+    "kane_status": "passed",
+    "kane_one_liner": "Success message appears on cart add",
+    "kane_steps": ["Navigate to product page", "Click Add to Cart", "Assert success notification visible"],
+    "kane_summary": "Cart add triggers success message",
+    "kane_code": ""
   }
 ]

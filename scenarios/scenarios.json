@@ -14,7 +14,8 @@
     ],
     "expected_result": "Cart count updates on product add",
     "kane_url": "https://ecommerce-playground.lambdatest.io/",
-    "last_verified": "2026-06-24"
+    "last_verified": "2026-06-25",
+    "kane_code": ""
   },
   {
     "id": "SC-002",
@@ -31,7 +32,8 @@
     ],
     "expected_result": "Cart dropdown renders item details",
     "kane_url": "https://ecommerce-playground.lambdatest.io/",
-    "last_verified": "2026-06-24"
+    "last_verified": "2026-06-25",
+    "kane_code": ""
   },
   {
     "id": "SC-003",
@@ -49,7 +51,8 @@
     ],
     "expected_result": "Item removal triggers total recalculation",
     "kane_url": "https://ecommerce-playground.lambdatest.io/",
-    "last_verified": "2026-06-24"
+    "last_verified": "2026-06-25",
+    "kane_code": ""
   },
   {
     "id": "SC-004",
@@ -66,7 +69,8 @@
     ],
     "expected_result": "Search yields matching products",
     "kane_url": "https://ecommerce-playground.lambdatest.io/",
-    "last_verified": "2026-06-24"
+    "last_verified": "2026-06-25",
+    "kane_code": ""
   },
   {
     "id": "SC-005",
@@ -82,7 +86,8 @@
     ],
     "expected_result": "Product catalog renders tiles",
     "kane_url": "https://ecommerce-playground.lambdatest.io/",
-    "last_verified": "2026-06-24"
+    "last_verified": "2026-06-25",
+    "kane_code": ""
   },
   {
     "id": "SC-006",
@@ -98,7 +103,8 @@
     ],
     "expected_result": "Product detail page renders fully",
     "kane_url": "https://ecommerce-playground.lambdatest.io/",
-    "last_verified": "2026-06-24"
+    "last_verified": "2026-06-25",
+    "kane_code": ""
   },
   {
     "id": "SC-007",
@@ -115,6 +121,25 @@
     ],
     "expected_result": "Filter narrows product listing",
     "kane_url": "https://ecommerce-playground.lambdatest.io/",
-    "last_verified": "2026-06-24"
+    "last_verified": "2026-06-25",
+    "kane_code": ""
+  },
+  {
+    "id": "SC-008",
+    "test_case_id": "TC-008",
+    "requirement_id": "AC-008",
+    "title": "Success message appears on cart add",
+    "function_name": "test_sc_008_success_message_appears_on_cart_add",
+    "status": "active",
+    "source_description": "User sees a success message after adding a product to the cart.",
+    "steps": [
+      "Navigate to product page",
+      "Click Add to Cart",
+      "Assert success notification visible"
+    ],
+    "expected_result": "Cart add triggers success message",
+    "kane_url": "https://ecommerce-playground.lambdatest.io/",
+    "last_verified": "2026-06-25",
+    "kane_code": ""
   }
 ]
