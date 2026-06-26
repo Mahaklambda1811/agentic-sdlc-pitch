@@ -45,7 +45,9 @@ def main() -> None:
               "| Req | Criterion | Scenario | KaneAI | Test Result |",
               "| --- | --- | --- | --- | --- |"]
     for r in matrix:
-        lines.append(f"| {r['req_id']} | {r['criterion'][:60]} | {r['sc_id']} | {r['kane']} | {r['overall']} {r['result']} |")
+        link = r.get('link', '')
+        result_cell = f"[{r['result']}]({link})" if link else r['result']
+        lines.append(f"| {r['req_id']} | {r['criterion'][:60]} | {r['sc_id']} | {r['kane']} | {r['overall']} {result_cell} |")
 
     lines += ["", "## Release Verdict", "", verdict_md]
 
