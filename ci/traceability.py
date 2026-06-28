@@ -77,8 +77,11 @@ def build_matrix() -> dict:
 
         # TM test case (written by flow2 after Phase 2)
         tm = tm_tcs.get(sc_id, {})
-        tm_id       = tm.get("tm_id", "—")
+        tm_id       = tm.get("tm_id", "")
         tc_internal = tm.get("internal_id", "—")   # e.g. TC-41514
+        # Build TM test case URL: link uses tm_id (UUID), label shows tc_internal (TC-NNNNN)
+        TM_BASE = f"https://test-manager.lambdatest.com/projects/01KVXJ82AKT83GWJNFZTQVMNRQ/test-cases"
+        tc_link = f"[{tc_internal}]({TM_BASE}/{tm_id})" if tm_id else "—"
 
         # RCA (written by rca.py after HE job)
         rca_entry   = rca_results.get(sc_id, {})
@@ -94,6 +97,7 @@ def build_matrix() -> dict:
             "objective":      obj.get("objective", ""),
             "tm_id":          tm_id,
             "tc_internal":    tc_internal,
+            "tc_link":        tc_link,
             "status":         status,
             "overall":        overall,
             "failure_detail": failure_detail,
@@ -126,6 +130,8 @@ def write_markdown(matrix: dict) -> str:
     he_jobs = matrix["he_jobs"]
     ts      = matrix["generated_at"]
 
+    TM_PROJECT_URL = "https://test-manager.lambdatest.com/projects/01KVXJ82AKT83GWJNFZTQVMNRQ/test-cases"
+
     lines = [
         "# Agentic SDLC — Traceability Matrix",
         f"\n_Generated: {ts}_\n",
@@ -134,14 +140,18 @@ def write_markdown(matrix: dict) -> str:
         "| -- | -------------------- | -- | ------------- | ------------ | ------ | ------ | --- |",
     ]
     for r in rows:
-        tc_str  = r["tc_internal"] if r["tc_internal"] != "—" else "pending"
         sc_name = r.get("sc_name", r["sc_id"])
-        # Prefer LT AI RCA; fall back to kane-cli failure detail for scenarios that never reached HE
+        # SC column: hyperlink to TM test case if available, else plain text
+        tm_id = r.get("tm_id", "")
+        sc_cell = f"[{r['sc_id']}]({TM_PROJECT_URL}/{tm_id})" if tm_id else r["sc_id"]
+        # TM TC column: hyperlinked label or pending
+        tc_cell = r.get("tc_link") or ("pending" if not r.get("tm_id") else r["tc_internal"])
+        # RCA: prefer LT AI RCA, fall back to kane-cli failure detail
         rca_val = r.get("rca") or (r.get("failure_detail", "")[:80] if r["status"] == "failed" else "")
         rca_snippet = (rca_val[:60] + "…") if len(rca_val) > 60 else (rca_val or "—")
         lines.append(
-            f"| {r['ac_id']} | {r['criterion'][:55]} | {r['sc_id']} "
-            f"| {sc_name[:45]} | {tc_str} | {r['status']} | {r['overall']} | {rca_snippet} |"
+            f"| {r['ac_id']} | {r['criterion'][:55]} | {sc_cell} "
+            f"| {sc_name[:45]} | {tc_cell} | {r['status']} | {r['overall']} | {rca_snippet} |"
         )
 
     lines += [
