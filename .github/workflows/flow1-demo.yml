@@ -11,13 +11,10 @@ name: "Flow 1 — Demo"
 # ─────────────────────────────────────────────────────────────────────────────
 
 on:
-  workflow_run:
-    workflows: ["Flow 1 — KaneAI Code Export"]
-    types: [completed]
   workflow_dispatch:
     inputs:
       run_id:
-        description: "Flow 1 run ID to pull results from (leave blank for latest)"
+        description: "Flow 1 run ID to pull results from (leave blank for latest successful run)"
         required: false
 
 env:
@@ -41,18 +38,7 @@ jobs:
       - name: Ensure reports directory
         run: mkdir -p reports
 
-      - name: Download Flow 1 results (from workflow_run event)
-        if: github.event_name == 'workflow_run'
-        uses: actions/download-artifact@v4
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
-          name: flow1-results-${{ github.event.workflow_run.run_number }}
-          path: .
-        continue-on-error: true
-
-      - name: Download Flow 1 results (manual dispatch — latest run)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Download Flow 1 results (latest successful run or specified run_id)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

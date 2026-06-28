@@ -136,7 +136,9 @@ def write_markdown(matrix: dict) -> str:
     for r in rows:
         tc_str  = r["tc_internal"] if r["tc_internal"] != "—" else "pending"
         sc_name = r.get("sc_name", r["sc_id"])
-        rca_snippet = (r["rca"][:60] + "…") if len(r.get("rca", "")) > 60 else r.get("rca", "—")
+        # Prefer LT AI RCA; fall back to kane-cli failure detail for scenarios that never reached HE
+        rca_val = r.get("rca") or (r.get("failure_detail", "")[:80] if r["status"] == "failed" else "")
+        rca_snippet = (rca_val[:60] + "…") if len(rca_val) > 60 else (rca_val or "—")
         lines.append(
             f"| {r['ac_id']} | {r['criterion'][:55]} | {r['sc_id']} "
             f"| {sc_name[:45]} | {tc_str} | {r['status']} | {r['overall']} | {rca_snippet} |"

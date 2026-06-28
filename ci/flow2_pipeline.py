@@ -391,8 +391,8 @@ if __name__ == "__main__":
         if history:
             healed = heal_objectives(history, log)
             if healed:
-                global SC_OBJECTIVES
-                SC_OBJECTIVES = json.loads(_OBJECTIVES_FILE.read_text()) if _OBJECTIVES_FILE.exists() else SC_OBJECTIVES
+                if _OBJECTIVES_FILE.exists():
+                    SC_OBJECTIVES = json.loads(_OBJECTIVES_FILE.read_text())
 
     if args.skip_phase1:
         last_run_file = Path(__file__).parent / "last_run.json"
