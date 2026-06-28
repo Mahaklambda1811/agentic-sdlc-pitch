@@ -97,6 +97,13 @@ jobs:
           URL="${{ inputs.requirements_url }}"
           echo "Downloading requirements from: $URL"
 
+          # Convert Google Drive file share URL → direct download
+          if echo "$URL" | grep -q "drive.google.com/file"; then
+            FILE_ID=$(echo "$URL" | grep -oP '(?<=/d/)[^/]+')
+            URL="https://drive.google.com/uc?export=download&id=${FILE_ID}"
+            echo "Converted to Google Drive direct download URL"
+          fi
+
           # Convert Google Docs share URL → plain text export
           if echo "$URL" | grep -q "docs.google.com/document"; then
             DOC_ID=$(echo "$URL" | grep -oP '(?<=/d/)[^/]+')
