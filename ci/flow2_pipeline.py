@@ -26,6 +26,13 @@ import urllib.error
 from datetime import datetime
 from pathlib import Path
 
+# Add ci/ to path for local imports
+sys.path.insert(0, str(Path(__file__).parent))
+from pipeline_logger import get_logger
+from self_heal import load_history, save_history, heal_objectives
+
+log = get_logger("flow2")
+
 # ── Credentials ───────────────────────────────────────────────────────────────
 LT_USERNAME   = os.environ.get("LT_USERNAME", "gagandeepb")
 LT_ACCESS_KEY = os.environ.get("LT_ACCESS_KEY")
@@ -121,10 +128,10 @@ def tm_request(method, path, payload=None):
 
 
 def run_kane(sc):
-    """Run a single kane-cli objective. Returns (status, session_id) or (None, None)."""
+    """Run a single kane-cli objective. Returns (status, session_id, failure_detail)."""
     sc_id  = sc["id"]
     obj    = sc["objective"]
-    print(f"\n  [{sc_id}] Running: {obj[:80]}...")
+    log.info(f"[{sc_id}] {obj[:80]}...")
 
     cmd = [
         "kane-cli", "run", obj,
@@ -140,12 +147,11 @@ def run_kane(sc):
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=KANE_TIMEOUT + 30)
     except subprocess.TimeoutExpired:
-        print(f"  [{sc_id}] TIMEOUT after {KANE_TIMEOUT + 30}s")
-        return None, None
+        detail = f"Timeout after {KANE_TIMEOUT + 30}s"
+        log.failure(sc_id, "TIMEOUT", detail=detail)
+        return None, None, detail
 
-    status     = None
-    session_id = None
-    session_dir = None
+    status = session_id = session_dir = failure_detail = None
 
     for line in result.stdout.splitlines():
         try:
@@ -159,15 +165,13 @@ def run_kane(sc):
                 session_id = Path(session_dir).name
             break
 
-    if status:
-        print(f"  [{sc_id}] {status.upper()} — session: {session_id}")
+    if status == "passed":
+        log.success(sc_id, f"session: {session_id}")
     else:
-        # Try to parse status from last step
-        print(f"  [{sc_id}] No run_end event — check kane-cli output")
-        if result.stderr:
-            print(f"  [{sc_id}] stderr: {result.stderr[:200]}")
+        failure_detail = (result.stderr or "")[:400] or "No run_end event captured"
+        log.failure(sc_id, detail=failure_detail)
 
-    return status, session_id
+    return status, session_id, failure_detail
 
 
 def get_testcase_id_from_session(session_id):
@@ -226,25 +230,25 @@ def fetch_tm_test_cases_by_ids(testcase_ids: list) -> list:
 # ── Phase 1: Run kane-cli objectives ─────────────────────────────────────────
 
 def phase1_run_objectives(objectives=None):
-    print("\n" + "="*60)
-    print("PHASE 1 — Running kane-cli objectives")
-    print("="*60)
+    log.phase("PHASE 1 — Running kane-cli objectives")
 
     results = []
     for sc in (objectives or SC_OBJECTIVES):
-        status, session_id = run_kane(sc)
+        status, session_id, failure_detail = run_kane(sc)
         tc_id = get_testcase_id_from_session(session_id)
         results.append({
-            "sc_id":       sc["id"],
-            "status":      status,
-            "session_id":  session_id,
-            "testcase_id": tc_id,
+            "sc_id":          sc["id"],
+            "objective":      sc.get("objective", ""),
+            "status":         status,
+            "session_id":     session_id,
+            "testcase_id":    tc_id,
+            "failure_detail": failure_detail or "",
         })
 
     passed = sum(1 for r in results if r["status"] == "passed")
-    print(f"\n  Kane-cli runs: {passed}/{len(results)} passed")
+    log.info(f"Kane-cli runs: {passed}/{len(results)} passed")
     for r in results:
-        print(f"    {r['sc_id']}: {r['status']} | session: {r['session_id']} | tc_id: {r['testcase_id']}")
+        log.info(f"  {r['sc_id']}: {r['status']} | session: {r['session_id']} | tc_id: {r['testcase_id']}")
 
     return results
 
@@ -374,17 +378,26 @@ if __name__ == "__main__":
                         help="Skip kane-cli runs — reuse sessions from ci/last_run.json (written by flow1_pipeline.py)")
     args = parser.parse_args()
 
-    print(f"Build: {BUILD_NAME}")
-    print(f"Project: kane-agentic ({PROJECT_ID})")
-    print(f"Environment: {ENVIRONMENT_ID} (Windows Config — Win10, Firefox 150)")
+    log.phase("FLOW 2 — KaneAI → Test Manager → HyperExecute API")
+    log.info(f"Build: {BUILD_NAME}")
+    log.info(f"Project: kane-agentic ({PROJECT_ID})")
+    log.info(f"Environment: {ENVIRONMENT_ID} (Windows Config — Win10, Firefox 150)")
+
+    # ── Self-heal: rewrite objectives that failed last run ────────────────────
+    if not args.skip_phase1:
+        history = load_history()
+        if history:
+            healed = heal_objectives(history, log)
+            if healed:
+                global SC_OBJECTIVES
+                SC_OBJECTIVES = json.loads(_OBJECTIVES_FILE.read_text()) if _OBJECTIVES_FILE.exists() else SC_OBJECTIVES
 
     if args.skip_phase1:
         last_run_file = Path(__file__).parent / "last_run.json"
         if not last_run_file.exists():
-            print("ERROR: ci/last_run.json not found — run flow1_pipeline.py first", file=sys.stderr)
+            log.error("ci/last_run.json not found — run flow1_pipeline.py first")
             sys.exit(1)
         raw = json.loads(last_run_file.read_text())
-        # Flow 1 saves session_dir (full path); derive session_id + testcase_id from it
         kane_results = []
         for r in raw:
             session_dir = r.get("session_dir")
@@ -396,18 +409,19 @@ if __name__ == "__main__":
                 "session_id":  session_id,
                 "testcase_id": tc_id,
             })
-        print(f"[skip-phase1] Loaded {len(kane_results)} sessions from {last_run_file.name}")
+        log.info(f"[skip-phase1] Loaded {len(kane_results)} sessions from {last_run_file.name}")
     else:
         objectives = SC_OBJECTIVES
         if args.sc:
             objectives = [s for s in SC_OBJECTIVES if s["id"] == args.sc]
             if not objectives:
-                print(f"ERROR: {args.sc} not found", file=sys.stderr)
+                log.error(f"{args.sc} not found")
                 sys.exit(1)
-        print(f"Running {len(objectives)} objective(s)")
+        log.info(f"Running {len(objectives)} objective(s)")
         kane_results = phase1_run_objectives(objectives)
+        save_history(kane_results, flow="flow2")
 
     test_cases = phase2_fetch_test_cases(kane_results)
     phase3_trigger_he(test_cases)
 
-    print("\nDone — monitor at: https://hyperexecute.lambdatest.com/")
+    log.info("Done — monitor at: https://hyperexecute.lambdatest.com/")

@@ -15,7 +15,7 @@
     "id": "SC-003",
     "ac_id": "AC-003",
     "name": "SC-003: Remove item recalculates cart total",
-    "objective": "Navigate to https://automationexercise.com/products, click \"Add to cart\" on the first product, click \"View Cart\" in the modal, then click the X button to remove the item from the cart row, and assert that the cart is empty with a total of $0 or no items displayed in the cart table."
+    "objective": "Navigate to https://automationexercise.com/products, click \"Add to cart\" on the first product, click \"View Cart\" in the modal, then click the X button to remove the item from the cart row, and assert that the empty cart message is displayed on the page."
   },
   {
     "id": "SC-004",

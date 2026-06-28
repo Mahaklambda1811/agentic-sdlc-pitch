@@ -15,3 +15,18 @@ hyperexecute-cli.log
 
 # Generated at runtime — do not commit
 reports/
+
+# HyperExecute build artifacts
+hyperexecuteupdate
+hyperexecute-*.zip
+hyperexecute-python-backup.yaml
+stage-log-*.log
+
+# Node
+node_modules/
+.npm_cache/
+package-lock.json
+
+# Runtime / vendor
+logs/
+vendor/

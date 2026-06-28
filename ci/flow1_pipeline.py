@@ -20,6 +20,10 @@ from pathlib import Path
 # Add ci/ to path for local import
 sys.path.insert(0, str(Path(__file__).parent))
 from transform_kane_export import transform
+from pipeline_logger import get_logger
+from self_heal import load_history, save_history, heal_objectives
+
+log = get_logger("flow1")
 
 # ── Config ────────────────────────────────────────────────────────────────────
 LT_USERNAME   = os.environ.get("LT_USERNAME", "gagandeepb")
@@ -96,7 +100,7 @@ else:
 
 def run_kane(sc):
     sc_id = sc["id"]
-    print(f"\n  [{sc_id}] {sc['objective'][:80]}...")
+    log.info(f"[{sc_id}] {sc['objective'][:80]}...")
     cmd = [
         "kane-cli", "run", sc["objective"],
         "--url", BASE_URL,
@@ -110,10 +114,10 @@ def run_kane(sc):
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=KANE_TIMEOUT + 30)
     except subprocess.TimeoutExpired:
-        print(f"  [{sc_id}] TIMEOUT")
-        return None, None
+        log.failure(sc_id, "TIMEOUT", detail=f"Exceeded {KANE_TIMEOUT + 30}s")
+        return None, None, f"Timeout after {KANE_TIMEOUT + 30}s"
 
-    status = session_dir = None
+    status = session_dir = failure_detail = None
     for line in result.stdout.splitlines():
         try:
             ev = json.loads(line)
@@ -124,50 +128,52 @@ def run_kane(sc):
             session_dir = ev.get("session_dir", "")
             break
 
-    print(f"  [{sc_id}] {(status or 'no-status').upper()}")
-    return status, session_dir
+    if status == "passed":
+        log.success(sc_id)
+    else:
+        failure_detail = (result.stderr or "")[:400] or "No stderr captured"
+        log.failure(sc_id, detail=failure_detail)
+
+    return status, session_dir, failure_detail
 
 
 def phase1_run_objectives(objectives=None):
-    print("\n" + "="*60)
-    print("PHASE 1 — Running kane-cli objectives")
-    print("="*60)
+    log.phase("PHASE 1 — Running kane-cli objectives")
     results = []
     for sc in (objectives or SC_OBJECTIVES):
-        status, session_dir = run_kane(sc)
-        results.append({**sc, "status": status, "session_dir": session_dir})
+        status, session_dir, failure_detail = run_kane(sc)
+        results.append({**sc, "status": status, "session_dir": session_dir,
+                        "failure_detail": failure_detail or ""})
     passed = sum(1 for r in results if r["status"] == "passed")
-    print(f"\n  {passed}/{len(results)} passed")
+    log.info(f"{passed}/{len(results)} passed")
     return results
 
 
 # ── Phase 2: Transform + write test.py ───────────────────────────────────────
 
 def phase2_transform_and_write(results):
-    print("\n" + "="*60)
-    print("PHASE 2 — Transforming exports → SC-XXX/test.py")
-    print("="*60)
+    log.phase("PHASE 2 — Transforming exports → SC-XXX/test.py")
 
     written = []
     for r in results:
         sc_id       = r["id"]
         session_dir = r.get("session_dir")
         if not session_dir:
-            print(f"  [{sc_id}] SKIP — no session dir")
+            log.warning(f"[{sc_id}] SKIP — no session dir")
             continue
 
         export_file = Path(session_dir) / "code-export" / "test.py"
         if not export_file.exists():
-            print(f"  [{sc_id}] SKIP — no code export at {export_file}")
+            log.warning(f"[{sc_id}] SKIP — no code export at {export_file}")
             continue
 
-        kane_code     = export_file.read_text(encoding="utf-8")
-        transformed   = transform(kane_code, sc_id, r["name"])
-        dest_dir      = KANE_DIR / sc_id
+        kane_code   = export_file.read_text(encoding="utf-8")
+        transformed = transform(kane_code, sc_id, r["name"])
+        dest_dir    = KANE_DIR / sc_id
         dest_dir.mkdir(parents=True, exist_ok=True)
-        dest_file     = dest_dir / "test.py"
+        dest_file   = dest_dir / "test.py"
         dest_file.write_text(transformed, encoding="utf-8")
-        print(f"  [{sc_id}] ✓ written → {dest_file}")
+        log.info(f"[{sc_id}] written → {dest_file}")
         written.append(sc_id)
 
     return written
@@ -176,30 +182,24 @@ def phase2_transform_and_write(results):
 # ── Phase 3: Trigger HyperExecute ────────────────────────────────────────────
 
 def phase3_trigger_he():
-    print("\n" + "="*60)
-    print("PHASE 3 — Triggering HyperExecute")
-    print("="*60)
+    log.phase("PHASE 3 — Triggering HyperExecute")
 
     if not HE_BINARY.exists():
-        print(f"  ERROR: {HE_BINARY} not found", file=sys.stderr)
+        log.error(f"{HE_BINARY} not found")
         sys.exit(1)
     if not LT_ACCESS_KEY:
-        print("  ERROR: LT_ACCESS_KEY not set", file=sys.stderr)
+        log.error("LT_ACCESS_KEY not set")
         sys.exit(1)
 
-    cmd = [
-        str(HE_BINARY),
-        "--user", LT_USERNAME,
-        "--key", LT_ACCESS_KEY,
-        "--config", str(HE_CONFIG),
-    ]
-    print(f"  Running: {' '.join(cmd[:4])} --key *** --config {HE_CONFIG}")
-    result = subprocess.run(cmd, capture_output=False)  # stream output live
+    cmd = [str(HE_BINARY), "--user", LT_USERNAME, "--key", LT_ACCESS_KEY,
+           "--config", str(HE_CONFIG)]
+    log.info(f"Running: hyperexecute --user {LT_USERNAME} --key *** --config {HE_CONFIG.name}")
+    result = subprocess.run(cmd, capture_output=False)
 
     if result.returncode != 0:
-        print(f"\n  HE job finished with exit code {result.returncode}")
+        log.error(f"HE job finished with exit code {result.returncode}")
     else:
-        print("\n  HE job completed successfully")
+        log.info("HE job completed successfully")
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -212,24 +212,30 @@ if __name__ == "__main__":
                         help="Skip kane-cli runs, use existing code exports")
     args = parser.parse_args()
 
+    log.phase("FLOW 1 — KaneAI → Code Export → HyperExecute")
+
+    # ── Self-heal: rewrite objectives that failed last run ────────────────────
+    history = load_history()
+    if history:
+        healed = heal_objectives(history, log)
+        if healed:
+            # Reload SC_OBJECTIVES after heal (objectives.json was updated)
+            global SC_OBJECTIVES
+            SC_OBJECTIVES = json.loads(_OBJECTIVES_FILE.read_text()) if _OBJECTIVES_FILE.exists() else SC_OBJECTIVES
+
     objectives = SC_OBJECTIVES
     if args.sc:
         objectives = [s for s in SC_OBJECTIVES if s["id"] == args.sc]
         if not objectives:
-            print(f"ERROR: {args.sc} not found", file=sys.stderr)
+            log.error(f"{args.sc} not found")
             sys.exit(1)
 
-    print("=" * 60)
-    print("FLOW 1 — KaneAI → Code Export → HyperExecute")
-    print("=" * 60)
-    print(f"Running {len(objectives)} SC objective(s)")
+    log.info(f"Running {len(objectives)} SC objective(s)")
 
     if args.skip_phase1:
-        # Build fake results from existing sessions
         results = []
         sessions_root = Path.home() / ".testmuai" / "kaneai" / "sessions"
         for sc in objectives:
-            # Find latest session with code export for this SC
             matched = None
             for sf in sorted(sessions_root.glob("*/session.json"), reverse=True):
                 try:
@@ -242,18 +248,18 @@ if __name__ == "__main__":
                             break
                 except Exception:
                     pass
-            results.append({**sc, "status": "passed", "session_dir": matched})
+            results.append({**sc, "status": "passed", "session_dir": matched, "failure_detail": ""})
     else:
         results = phase1_run_objectives(objectives)
-        # Save session results so Flow 2 can reuse them with --skip-phase1
+        save_history(results, flow="flow1")
         last_run_file = Path(__file__).parent / "last_run.json"
         last_run_file.write_text(json.dumps(results, indent=2))
-        print(f"\n  [saved] {last_run_file.name} — Flow 2 can use this with --skip-phase1")
+        log.info(f"Saved last_run.json — Flow 2 can use with --skip-phase1")
 
     written = phase2_transform_and_write(results)
 
     if not written:
-        print("\nERROR: No test files written — aborting HE trigger", file=sys.stderr)
+        log.error("No test files written — aborting HE trigger")
         sys.exit(1)
 
     phase3_trigger_he()
