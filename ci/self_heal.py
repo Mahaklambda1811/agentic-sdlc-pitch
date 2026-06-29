@@ -60,7 +60,7 @@ RULES for rewriting:
 """
 
 
-def heal_single_objective(sc: dict, failure_detail: str, log=None) -> str | None:
+def heal_single_objective(sc: dict, failure_detail: str, log=None):
     """
     Ask Claude to rewrite one failed objective inline (during the same run).
     Returns new objective string, or None if heal is not possible.
