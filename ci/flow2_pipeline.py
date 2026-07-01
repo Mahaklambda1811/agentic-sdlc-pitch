@@ -441,17 +441,21 @@ def phase1_run_objectives(objectives=None):
             # Tier 2: still failing after infra-retry → logic failure → heal + retry
             if status != "passed" and failure_detail:
                 log.warning(f"[{sc['id']}] authoring failed — attempting inline heal + retry")
+                original_obj = sc.get("objective", "")
                 healed_obj = heal_single_objective(sc, failure_detail, log)
                 if healed_obj:
+                    log.info(f"[{sc['id']}] ── inline heal objective comparison ──")
+                    log.info(f"[{sc['id']}]   BEFORE: {original_obj}")
+                    log.info(f"[{sc['id']}]   AFTER : {healed_obj}")
                     sc_retry = {**sc, "objective": healed_obj}
                     s2, sid2, fd2 = run_kane(sc_retry)
                     if s2 == "passed":
-                        log.info(f"[{sc['id']}] retry PASSED with healed objective")
+                        log.info(f"[{sc['id']}] retry PASSED with healed objective ✓")
                         status, session_id, failure_detail = s2, sid2, fd2
                         sc = sc_retry
                         healed = True
                     else:
-                        log.warning(f"[{sc['id']}] retry also failed")
+                        log.warning(f"[{sc['id']}] retry also failed with healed objective")
         tc_id = get_testcase_id_from_session(session_id)
         return idx, {
             "sc_id":          sc_id,
