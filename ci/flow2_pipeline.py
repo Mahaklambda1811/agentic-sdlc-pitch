@@ -812,12 +812,25 @@ if __name__ == "__main__":
     if custom_url_run and healed_count:
         log.info("[auto-improve] Custom URL run — skipping auto-commit to keep repo on default (saucedemo) objectives")
         healed_count = 0
+    # Always commit run_history + tm_test_cases so the reuse check survives a fresh CI checkout.
+    # These files are needed for kane-cli to skip re-authoring unchanged SCs next run.
+    import subprocess as _sp
+    _sp.run(["git", "config", "user.email", "actions@github.com"], check=False)
+    _sp.run(["git", "config", "user.name", "GitHub Actions"], check=False)
+    _sp.run(["git", "add", "ci/run_history.json"], check=False)
+    _sp.run(["git", "add", "ci/tm_test_cases.json"], check=False)
+    state_result = _sp.run(
+        ["git", "commit", "-m",
+         f"chore(state): persist run state from run #{os.environ.get('GITHUB_RUN_NUMBER', '?')} [skip ci]"],
+        capture_output=True, text=True
+    )
+    if state_result.returncode == 0:
+        _sp.run(["git", "push"], check=False)
+        log.info("[auto-improve] run_history.json + tm_test_cases.json committed for reuse next run")
+
     if healed_count:
         log.info(f"[auto-improve] {healed_count} objective(s) improved — committing objectives.json")
-        import subprocess as _sp
         run_number = os.environ.get("GITHUB_RUN_NUMBER", "?")
-        _sp.run(["git", "config", "user.email", "actions@github.com"], check=False)
-        _sp.run(["git", "config", "user.name", "GitHub Actions"], check=False)
         # Stage objectives + analyzed_requirements together so they always stay in sync
         _sp.run(["git", "add", "ci/objectives.json"], check=False)
         _sp.run(["git", "add", "requirements/analyzed_requirements.json"], check=False)
