@@ -218,10 +218,19 @@ def write_markdown(matrix: dict) -> str:
         "| -- | ------------- | --------- |",
     ]
     for r in rows:
-        obj_text    = r.get("objective", "—")
-        healed_from = r.get("healed_from", "")
-        obj_cell    = f"~~{healed_from}~~ → {obj_text}" if healed_from else obj_text
-        lines.append(f"| {r['sc_id']} | {r.get('sc_name', r['sc_id'])} | {obj_cell} |")
+        lines.append(f"| {r['sc_id']} | {r.get('sc_name', r['sc_id'])} | {r.get('objective', '—')} |")
+
+    # ── Healed Objectives ─────────────────────────────────────────────────────
+    healed_rows = [r for r in rows if r.get("healed_from")]
+    if healed_rows:
+        lines += [
+            "",
+            "## Healed Objectives\n",
+            "| SC | Previous Objective | Healed Objective |",
+            "| -- | ------------------ | ---------------- |",
+        ]
+        for r in healed_rows:
+            lines.append(f"| {r['sc_id']} | {r['healed_from']} | {r['objective']} |")
 
     # ── Failed Scenarios RCA ──────────────────────────────────────────────────
     # Show authoring failures and execution failures in separate subsections
